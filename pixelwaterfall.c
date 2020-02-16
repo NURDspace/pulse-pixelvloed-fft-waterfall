@@ -20,12 +20,12 @@
 
 #pragma pack(1)
 
-//#define displayIP "10.208.42.159"
-#define displayIP "127.0.0.1"
+#define displayIP "10.208.42.159"
+//#define displayIP "127.0.0.1"
 
-#define displayX 32 
+#define displayX 16 
 #define displayY 128
-#define displayXOffset 0
+#define displayXOffset 16
 #define displayYOffset 0
 
 struct Pixel {
@@ -291,13 +291,6 @@ int main(int argc, char* argv[])
 
         for(int i = 0; i < displayY / 2; i++)
         {
-            /*
-            barHeight = (uint8_t)map((int)barsL[i], 0, 255, 0, 255);
-            frameBuffer[0][i] = barHeight;
-            barHeight = (uint8_t)map((int)barsR[i], 0, 255, 0, 255);
-            frameBuffer[0][displayY - 1 - i] = barHeight;
-            */
-
             frameBuffer[0][i] = barsL[i]; 
             frameBuffer[0][displayY - 1 - i] = barsR[i];
         }
@@ -307,8 +300,7 @@ int main(int argc, char* argv[])
             for (int y = 0; y < displayY; y++) {
                 myPacket.pixel[y].x = x + displayXOffset;
                 myPacket.pixel[y].y = y + displayYOffset;
-                int value = map(frameBuffer[x][y],0,255,0,360);
-                HSV_to_RGB((float)value, 100.0, 50.0, &r, &g, &b);
+                HSV_to_RGB((float)map(frameBuffer[x][y],0,255,0,360), 100.0, 50.0, &r, &g, &b);
                 myPacket.pixel[y].r = r;
                 myPacket.pixel[y].g = g;
                 myPacket.pixel[y].b = b;
