@@ -15,18 +15,11 @@
 #include <time.h>
 #include <sys/time.h>
 #include <systemd/sd-daemon.h>
+#include "config.h"
 
 //Tnx to https://gitlab.com/nitroxis/pasa/ for providing a good example of how to do this
 
 #pragma pack(1)
-
-#define displayIP "10.208.42.159"
-//#define displayIP "127.0.0.1"
-
-#define displayX 16 
-#define displayY 128
-#define displayXOffset 16
-#define displayYOffset 0
 
 struct Pixel {
     uint16_t y;
@@ -38,7 +31,7 @@ struct Pixel {
 
 struct Packet {
     uint16_t header;
-    struct Pixel pixel[displayY];
+    struct Pixel pixel[PACKET_SIZE];
 } packet;
 
 uint8_t frameBuffer[displayX][displayY];
@@ -47,7 +40,7 @@ struct sigaction old_sigint;
 volatile bool run;
 
 int framesPerSecond = 25;
-double upperFrequency = 3520.0; // A7
+double upperFrequency = 20520.0; // A7
 double gain = 15.0;
 
 void HSV_to_RGB(float h, float s, float v, uint8_t *r, uint8_t *g, uint8_t *b)
@@ -255,6 +248,7 @@ int main(int argc, char* argv[])
     myPacket.header = 0;
     float color[3];
     uint8_t r,g,b;
+    int pixelCnt = 0;
 
     sd_notify(0, "READY=1");
 
@@ -298,14 +292,26 @@ int main(int argc, char* argv[])
         //Draw Pixels
         for (int x = 0; x < displayX; x++) {
             for (int y = 0; y < displayY; y++) {
-                myPacket.pixel[y].x = x + displayXOffset;
-                myPacket.pixel[y].y = y + displayYOffset;
+                myPacket.pixel[pixelCnt].x = x + displayXOffset;
+                myPacket.pixel[pixelCnt].y = y + displayYOffset;
                 HSV_to_RGB((float)map(frameBuffer[x][y],0,255,0,360), 100.0, 50.0, &r, &g, &b);
-                myPacket.pixel[y].r = r;
-                myPacket.pixel[y].g = g;
-                myPacket.pixel[y].b = b;
+                myPacket.pixel[pixelCnt].r = r;
+                myPacket.pixel[pixelCnt].g = g;
+                myPacket.pixel[pixelCnt].b = b;
+                pixelCnt++;
+
+                //Send packet buffer
+                if (pixelCnt == PACKET_SIZE) {
+                    sendto(clientSocket,(void*)&myPacket,sizeof(myPacket),0,(struct sockaddr *)&serverAddr,addr_size);
+                    pixelCnt = 0;
+                }
             }
-            sendto(clientSocket,(void*)&myPacket,sizeof(myPacket),0,(struct sockaddr *)&serverAddr,addr_size);
+        }
+        //Send last part of buffer
+        if (pixelCnt > 0) {
+            int packetSize = sizeof(myPacket) - (PACKET_SIZE - pixelCnt) * 7 + 2;
+            sendto(clientSocket,(void*)&myPacket,packetSize,0,(struct sockaddr *)&serverAddr,addr_size);
+            pixelCnt=0;
         }
     }
 
@@ -319,4 +325,3 @@ int main(int argc, char* argv[])
 
     return 0;
 }
-

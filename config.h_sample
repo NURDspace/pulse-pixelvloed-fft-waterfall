@@ -1,0 +1,8 @@
+#define displayIP "10.208.42.159"
+
+#define displayX 32 
+#define displayY 128
+#define displayXOffset 0 
+#define displayYOffset 0
+
+#define PACKET_SIZE 128 
