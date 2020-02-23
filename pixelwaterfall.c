@@ -40,7 +40,7 @@ struct sigaction old_sigint;
 volatile bool run;
 
 int framesPerSecond = 25;
-double upperFrequency = 18520.0; // A7
+double upperFrequency = 12520.0; // A7
 double gain = 1.0;
 
 void HSV_to_RGB(float h, float s, float v, uint8_t *r, uint8_t *g, uint8_t *b)
@@ -144,7 +144,7 @@ void calculateBars(fftw_complex* fft, int fftSize, int* bars, int numBars)
             power += re * re + im * im; // abs(c)
         }
         power *= (1.0 / barWidth); // average.
-        if(power < 1e-255) power = 1e-255; // prevent overflows.
+        if(power < 1e-15) power = 1e-15; // prevent overflows.
 
         // compute decibels.
         int dB = 255 + (int)(10.0 * log10(power));
