@@ -244,8 +244,8 @@ int main(int argc, char* argv[])
     int pixelCnt = 0;
     int maxValue = 1;
     int minValue = 200;
-    int maxValueAvg = 0;
-    int minValueAvg = 0;
+    int maxValueAvg[255];
+    int minValueAvg[255];
     int loopCounter = 0;
 
     sd_notify(0, "READY=1");
@@ -302,18 +302,21 @@ int main(int argc, char* argv[])
         }
 
         //Calculate avarage
-        maxValueAvg += maxValueTmp;
-        minValueAvg += minValueTmp;
-        if (loopCounter > 245) {
-            if (minValueTmp > 0)
-                minValue = minValueAvg / loopCounter;
-            if (maxValueTmp > 0)
-                maxValue = maxValueAvg / loopCounter;
-            maxValueAvg = 0;
-            minValueAvg = 0;
-            loopCounter = 0;
+        memmove(&maxValueAvg[1], &maxValueAvg[0], sizeof(maxValueAvg)-sizeof(maxValueAvg[1]));
+        memmove(&minValueAvg[1], &minValueAvg[0], sizeof(minValueAvg)-sizeof(minValueAvg[1]));
+        maxValueAvg[0] = maxValueTmp;
+        minValueAvg[0] = minValueTmp;
+
+        maxValueTmp = 0;
+        minValueTmp = 0;
+
+        for(int i = 0; i < 255; i++) {
+            maxValueTmp += maxValueAvg[i];
+            minValueTmp += minValueAvg[i];
         }
-        loopCounter++;
+
+        maxValue = maxValueTmp / 255;
+        minValue = minValueTmp / 255;
 
         //Draw Pixels
         for (int x = 0; x < displayX; x++) {
