@@ -40,8 +40,8 @@ struct sigaction old_sigint;
 volatile bool run;
 
 int framesPerSecond = 25;
-double upperFrequency = 20520.0; // A7
-double gain = 15.0;
+double upperFrequency = 18520.0; // A7
+double gain = 1.0;
 
 void HSV_to_RGB(float h, float s, float v, uint8_t *r, uint8_t *g, uint8_t *b)
 {
@@ -94,13 +94,6 @@ void HSV_to_RGB(float h, float s, float v, uint8_t *r, uint8_t *g, uint8_t *b)
       *g = round(255*p);
       *b = round(255*q);
     }
-}
-
-long long current_timestamp() {
-    struct timeval te; 
-    gettimeofday(&te, NULL); // get current time
-    long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // calculate milliseconds
-    return milliseconds;
 }
 
 long map(long x, long in_min, long in_max, long out_min, long out_max)
@@ -212,7 +205,7 @@ int main(int argc, char* argv[])
 
     // open record device
     int error;
-    pa_simple *s = pa_simple_new(NULL, "pasa", PA_STREAM_RECORD, NULL, "record", &ss, NULL, NULL, &error);
+    pa_simple *s = pa_simple_new(NULL, "fftwaterfall", PA_STREAM_RECORD, NULL, "record", &ss, NULL, NULL, &error);
 
     // check error
     if (!s)
@@ -249,6 +242,11 @@ int main(int argc, char* argv[])
     float color[3];
     uint8_t r,g,b;
     int pixelCnt = 0;
+    int maxValue = 1;
+    int minValue = 200;
+    int maxValueAvg = 0;
+    int minValueAvg = 0;
+    int loopCounter = 0;
 
     sd_notify(0, "READY=1");
 
@@ -283,18 +281,58 @@ int main(int argc, char* argv[])
         //Shift framebuffer by 1
         memmove(frameBuffer[1], frameBuffer[0], sizeof(frameBuffer[1])*(displayX - 1));
 
+        //Start values for finding min/max
+        int maxValueTmp = 0;
+        int minValueTmp = 255;
         for(int i = 0; i < displayY / 2; i++)
         {
             frameBuffer[0][i] = barsL[i]; 
             frameBuffer[0][displayY - 1 - i] = barsR[i];
+            //frameBuffer[0][ i  + (displayY / 2)] = barsR[i];
+
+            //Find min and max
+            if (barsL[i] > maxValueTmp)
+                maxValueTmp = barsL[i];
+            if (barsL[i] < minValueTmp)
+                minValueTmp = barsL[i];
+            if (barsR[i] > maxValueTmp)
+                maxValueTmp = barsR[i];
+            if (barsR[i] < minValueTmp)
+                minValueTmp = barsR[i];
         }
+
+        //Calculate avarage over 51 loops
+        maxValueAvg += maxValueTmp;
+        minValueAvg += minValueTmp;
+        if (loopCounter > 50) {
+            if (minValueTmp > 0)
+                minValue = minValueAvg / loopCounter;
+            if (maxValueTmp > 0)
+                maxValue = maxValueAvg / loopCounter;
+            maxValueAvg = 0;
+            minValueAvg = 0;
+            loopCounter = 0;
+        }
+
+        //Update Min and Max
+        if (maxValueTmp > maxValue)
+            maxValue = maxValueTmp;
+        if (minValueTmp < minValue)
+            minValue = minValueTmp;
+        loopCounter++;
 
         //Draw Pixels
         for (int x = 0; x < displayX; x++) {
             for (int y = 0; y < displayY; y++) {
-                myPacket.pixel[pixelCnt].x = x + displayXOffset;
+                myPacket.pixel[pixelCnt].x = (displayX - 1) - (x + displayXOffset);
                 myPacket.pixel[pixelCnt].y = y + displayYOffset;
-                HSV_to_RGB((float)map(frameBuffer[x][y],0,255,0,360), 100.0, 50.0, &r, &g, &b);
+                if (frameBuffer[x][y] > 0)
+                    HSV_to_RGB((float)map(frameBuffer[x][y],minValue,maxValue,250,0), 100.0, 100.0, &r, &g, &b);
+                else {
+                    r = 0;
+                    g = 0;
+                    b = 0;
+                }
                 myPacket.pixel[pixelCnt].r = r;
                 myPacket.pixel[pixelCnt].g = g;
                 myPacket.pixel[pixelCnt].b = b;
@@ -307,6 +345,7 @@ int main(int argc, char* argv[])
                 }
             }
         }
+
         //Send last part of buffer
         if (pixelCnt > 0) {
             int packetSize = sizeof(myPacket) - (PACKET_SIZE - pixelCnt) * 7 + 2;
