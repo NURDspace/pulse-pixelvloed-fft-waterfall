@@ -244,8 +244,8 @@ int main(int argc, char* argv[])
     int pixelCnt = 0;
     int maxValue = 1;
     int minValue = 200;
-    int maxValueAvg[255];
-    int minValueAvg[255];
+    unsigned maxValueAvg[255];
+    unsigned minValueAvg[255];
     int loopCounter = 0;
 
     sd_notify(0, "READY=1");
@@ -282,8 +282,8 @@ int main(int argc, char* argv[])
         memmove(frameBuffer[1], frameBuffer[0], sizeof(frameBuffer[1])*(displayX - 1));
 
         //Start values for finding min/max
-        int maxValueTmp = 0;
-        int minValueTmp = 255;
+        unsigned maxValueTmp = 0;
+        unsigned minValueTmp = 255;
         for(int i = 0; i < displayY / 2; i++)
         {
             frameBuffer[0][i] = barsL[i]; 
@@ -302,29 +302,33 @@ int main(int argc, char* argv[])
         }
 
         //Calculate avarage
-        memmove(&maxValueAvg[1], &maxValueAvg[0], sizeof(maxValueAvg)-sizeof(maxValueAvg[1]));
-        memmove(&minValueAvg[1], &minValueAvg[0], sizeof(minValueAvg)-sizeof(minValueAvg[1]));
+       
+        //Shift buffer 1 up
+        memmove(&maxValueAvg[1], &maxValueAvg[0], sizeof(maxValueAvg[1]) * 254);
+        memmove(&minValueAvg[1], &minValueAvg[0], sizeof(minValueAvg[1]) * 254);
+
+        //Load new avr value
         maxValueAvg[0] = maxValueTmp;
         minValueAvg[0] = minValueTmp;
 
+        //Calculate avr over the array
         maxValueTmp = 0;
         minValueTmp = 0;
-
-        for(int i = 0; i < 255; i++) {
+        for(int i = 0; i < loopCounter; i++) {
             maxValueTmp += maxValueAvg[i];
             minValueTmp += minValueAvg[i];
         }
-
-        maxValue = maxValueTmp / 255;
-        minValue = minValueTmp / 255;
+        if (loopCounter != 255) loopCounter++;
+        maxValue = maxValueTmp / loopCounter;
+        minValue = minValueTmp / loopCounter;
 
         //Draw Pixels
         for (int x = 0; x < displayX; x++) {
             for (int y = 0; y < displayY; y++) {
                 myPacket.pixel[pixelCnt].x = (displayX - 1) - (x + displayXOffset);
                 myPacket.pixel[pixelCnt].y = y + displayYOffset;
-                if (frameBuffer[x][y] > 0 && minValue != maxValue)
-                    HSV_to_RGB((float)map(frameBuffer[x][y],minValue,maxValue,250,0), 100.0, 100.0, &r, &g, &b);
+                if (frameBuffer[x][y] > 105 && minValue != maxValue)
+                    HSV_to_RGB((float)map(frameBuffer[x][y],minValue,maxValue,240,0), 100.0, 100.0, &r, &g, &b);
                 else {
                     r = 0;
                     g = 0;
