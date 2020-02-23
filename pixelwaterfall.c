@@ -304,7 +304,7 @@ int main(int argc, char* argv[])
         //Calculate avarage over 51 loops
         maxValueAvg += maxValueTmp;
         minValueAvg += minValueTmp;
-        if (loopCounter > 50) {
+        if (loopCounter > 245) {
             if (minValueTmp > 0)
                 minValue = minValueAvg / loopCounter;
             if (maxValueTmp > 0)
