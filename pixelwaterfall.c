@@ -326,7 +326,7 @@ int main(int argc, char* argv[])
             for (int y = 0; y < displayY; y++) {
                 myPacket.pixel[pixelCnt].x = (displayX - 1) - (x + displayXOffset);
                 myPacket.pixel[pixelCnt].y = y + displayYOffset;
-                if (frameBuffer[x][y] > 0)
+                if (frameBuffer[x][y] > 0 && minValue != maxValue)
                     HSV_to_RGB((float)map(frameBuffer[x][y],minValue,maxValue,250,0), 100.0, 100.0, &r, &g, &b);
                 else {
                     r = 0;
