@@ -301,7 +301,7 @@ int main(int argc, char* argv[])
                 minValueTmp = barsR[i];
         }
 
-        //Calculate avarage over 51 loops
+        //Calculate avarage
         maxValueAvg += maxValueTmp;
         minValueAvg += minValueTmp;
         if (loopCounter > 245) {
@@ -313,12 +313,6 @@ int main(int argc, char* argv[])
             minValueAvg = 0;
             loopCounter = 0;
         }
-
-        //Update Min and Max
-        if (maxValueTmp > maxValue)
-            maxValue = maxValueTmp;
-        if (minValueTmp < minValue)
-            minValue = minValueTmp;
         loopCounter++;
 
         //Draw Pixels
